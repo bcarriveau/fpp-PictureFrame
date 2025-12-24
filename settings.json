@@ -10,6 +10,14 @@
                 "pfmailbox",
                 "pfautodelete"
             ]
+        },
+        "pfgdrivesettings": {
+            "description": "Google Drive Shared Folders Settings",
+            "settings": [
+                "gdrive_enabled",
+                "gdrive_folder_urls",
+                "gdrive_last_sync"
+            ]
         }
     },
     "attributes": {
@@ -32,7 +40,7 @@
         "pfemailport": {
             "name": "pfemailport",
             "description": "IMAP Server Port",
-            "tip": "TCP Port used on IMAP server.  Most server use 993 for encrypted traffic, some servers may still require 143.",
+            "tip": "TCP Port used on IMAP server. Most server use 993 for encrypted traffic, some servers may still require 143.",
             "gatherStats": false,
             "restart": 0,
             "type": "select",
@@ -82,12 +90,39 @@
         "pfautodelete": {
             "name": "pfautodelete",
             "description": "Delete After Downloading",
-            "tip": "Automatically delete emails after downloading images.  If no attachment images are found, the email will not be deleted.",
+            "tip": "Automatically delete emails after downloading images. If no attachment images are found, the email will not be deleted.",
             "gatherStats": false,
             "type": "checkbox",
             "checkedValue": "1",
             "uncheckedValue": "0",
             "default": "1"
+        },
+        "gdrive_enabled": {
+            "name": "gdrive_enabled",
+            "description": "Enable Google Drive Sync",
+            "tip": "Enable automatic downloading of images from public shared Google Drive folders. Requires 'Anyone with the link' access.",
+            "type": "checkbox",
+            "checkedValue": "1",
+            "uncheckedValue": "0",
+            "default": "0"
+        },
+        "gdrive_folder_urls": {
+            "name": "gdrive_folder_urls",
+            "description": "Shared Google Drive Folder URLs",
+            "tip": "Enter one or more public shared folder URLs (e.g., https://drive.google.com/drive/folders/ABC123?usp=sharing), separated by semicolons (;). Only folders with 'Anyone with the link' access will work.",
+            "type": "text",
+            "size": 60,
+            "maxlength": 1024,
+            "default": ""
+        },
+        "gdrive_last_sync": {
+            "name": "gdrive_last_sync",
+            "description": "Last Successful Sync",
+            "tip": "Timestamp of the last successful Google Drive sync. Updated automatically - do not edit this field.",
+            "type": "text",
+            "size": 30,
+            "maxlength": 64,
+            "default": "Never"
         }
     }
 }

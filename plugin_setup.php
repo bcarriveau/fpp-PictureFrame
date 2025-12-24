@@ -1,3 +1,31 @@
+<?php
+// Force enable error reporting to diagnose issues
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Fallback for potential undefined variables
+if (!isset($configDirectory)) {
+    $configDirectory = '/home/fpp/media/config';
+}
+
+if (isset($_GET['action']) && $_GET['action'] == 'sync_gdrive') {
+    // PHP handler to run the sync script
+    $scriptPath = '/home/fpp/media/plugins/fpp-PictureFrame/scripts/sync_gdrive.sh';  // Adjust if script is elsewhere
+    if (file_exists($scriptPath)) {
+        shell_exec("bash $scriptPath 2>&1");
+        $logFile = '/tmp/gdrive_sync.log';
+        if (file_exists($logFile)) {
+            echo nl2br(file_get_contents($logFile));
+        } else {
+            echo "No log file generated.";
+        }
+    } else {
+        echo "Error: sync_gdrive.sh not found at $scriptPath";
+    }
+    exit;
+}
+?>
 
 <script>
 var config = {};          // Plugin configuration
@@ -33,16 +61,46 @@ function CheckForNewImages() {
             }
         }
     };
-
     $('#fetchImagesCloseButton').prop('disabled', true);
     DoModalDialog(options);
-
     StreamURL('runEventScript.php?scriptName=CheckForNewPictureFrameImages.sh&nohtml=1', 'fetchImagesText', 'FetchImagesDone');
 }
 
 function FetchImagesDone() {
     $('#fetchImagesCloseButton').prop('disabled', false);
     EnableModalDialogCloseButton('fetchImagesDialog');
+}
+
+function SyncGDrive() {
+    var options = {
+        id: 'syncGDriveDialog',
+        title: 'Sync Google Drive Folders',
+        body: "<textarea style='width: 99%; height: 500px;' disabled id='syncGDriveText'></textarea>",
+        noClose: true,
+        keyboard: false,
+        backdrop: 'static',
+        footer: '',
+        buttons: {
+            'Close': {
+                id: 'syncGDriveCloseButton',
+                click: function() { CloseModalDialog('syncGDriveDialog'); },
+                disabled: true,
+                class: 'btn-success'
+            }
+        }
+    };
+    $('#syncGDriveCloseButton').prop('disabled', true);
+    DoModalDialog(options);
+    StreamURL('plugin.php?plugin=fpp-PictureFrame&page=plugin_setup.php&action=sync_gdrive&nopage=1', 'syncGDriveText', 'SyncDone');
+}
+
+function SyncDone() {
+    $('#syncGDriveCloseButton').prop('disabled', false);
+    EnableModalDialogCloseButton('syncGDriveDialog');
+    // Reload last sync time in UI (FPP API for single setting)
+    $.get('/api/setting/gdrive_last_sync', function(data) {
+        $('#text-gdrive_last_sync').val(data);
+    });
 }
 
 function GeneratePlaylist() {
@@ -79,7 +137,6 @@ function GeneratePlaylist() {
 
     $('#foldersBody > tr').each(function() {
         var folder = $(this).find('.folder').val();
-
         var i = {};
         i.type = "image";
         i.enabled = 1;
@@ -150,7 +207,6 @@ function GeneratePlaylist() {
             DialogError('Unable to save playlist', "Error: Unable to save playlist." + show_details(args));
         }
     });
-
 }
 
 function UpdateFolderDatalist() {
@@ -164,7 +220,6 @@ function UpdateFolderDatalist() {
 
 function SaveFolders() {
     var folders = [];
-
     $('#foldersBody > tr').each(function() {
         var folder = $(this).find('.folder').val();
         if (folder != '') {
@@ -172,7 +227,6 @@ function SaveFolders() {
             folders.push(folder);
         }
     });
-
     UpdateFolderDatalist();
 }
 
@@ -192,7 +246,6 @@ function SavePictureFrameConfig() {
     config.senders = senders;
 
     var configStr = JSON.stringify(config);
-
     $.post('/api/configfile/plugin.fpp-PictureFrame.json', configStr).done(function(data) {
         $.jGrowl('FPP Picture Frame Config Saved');
     }).fail(function() {
@@ -219,17 +272,14 @@ function LoadConfig() {
             $('#sendersBody').html(rows);
         }
     });
-
 }
 
 function DeleteSelectedFolder() {
     if (folderTableInfo.selected >= 0) {
         var folder = $('#foldersBody .fppTableSelectedEntry').find('.folder').val();
-
         $('#foldersBody .fppTableSelectedEntry').remove();
         folderTableInfo.selected = -1;
         SetButtonState("#btnDeleteFolder", "disable");
-
         if (folder != '') {
             $.ajax({
                 url: 'api/dir/Images/' + folder,
@@ -242,7 +292,6 @@ function DeleteSelectedFolder() {
             });
         }
     }
-
     UpdateFolderDatalist();
 }
 
@@ -273,15 +322,15 @@ var senderTableInfo = {
 $(document).ready(function() {
     SetupSelectableTableRow(folderTableInfo);
     SetupSelectableTableRow(senderTableInfo);
-    LoadConfig();   
+    LoadConfig();
     $(document).tooltip();
+    // Make last sync field readonly (since FPP doesn't support "readonly" type natively)
+    $('#text-gdrive_last_sync').prop('readonly', true);
 });
-
 </script>
 
 <?php
 $needfb = 1;
-
 if (file_exists($configDirectory . '/model-overlays.json')) {
     $data = file_get_contents($configDirectory . '/model-overlays.json');
     $models = json_decode($data, true);
@@ -291,7 +340,6 @@ if (file_exists($configDirectory . '/model-overlays.json')) {
         }
     }
 }
-
 if ($needfb) {
     echo "<span class='alert alert-danger'><b>WARNING: Could not find Pixel Overlay Model, click for <a href='javascript:void();' onClick='DisplayHelp();'>more info</a>.</b></span>\n";
 }
@@ -316,7 +364,7 @@ if ($needfb) {
             <div class='fppTableContents'>
                 <table id='foldersTable' class='fppSelectableRowTable'>
                     <tbody id='foldersBody'>
-<?
+<?php
 $imageFolders = array();
 $imageDir = '/home/fpp/media/images';
 foreach (scandir($imageDir) as $fileName) {
@@ -326,7 +374,6 @@ foreach (scandir($imageDir) as $fileName) {
         }
     }
 }
-
 foreach ($imageFolders as $dirName) {
     printf( "<tr><td><input type='text' class='folder' size=32 maxlength=64 value='%s' disabled/></td></tr>", $dirName);
 }
@@ -371,24 +418,29 @@ foreach ($imageFolders as $dirName) {
         </div>
 
         <br>
-<?
+<?php
 PrintSettingGroup('pfimapsettings', '', '', '', 'fpp-PictureFrame');
 ?>
 
-
         <input type='button' class='buttons btn-success' value='Check For New Images' onClick='CheckForNewImages();'>
         <input type='button' class='buttons btn-success' value='Generate Example Playlist' onClick='GeneratePlaylist();'>
+        <br><br>
+        <hr>
+        <br>
+<?php
+PrintSettingGroup('pfgdrivesettings', '', '', '', 'fpp-PictureFrame');
+?>
+
+        <input type='button' class='buttons btn-success' value='Sync Now' onClick='SyncGDrive();'>
     </fieldset>
 </div>
-
 <div id='emailPopup' title='Checking for new images' style="display: none">
     <textarea style='width: 99%; height: 500px;' disabled id='emailText'>
     </textarea>
     <input id='closeDialogButton' type='button' class='buttons' value='Close' onClick="$('#emailPopup').fppDialog('close');" style='display: none;'>
 </div>
-
 <datalist id='imageFolders'>
-<?
+<?php
 foreach ($imageFolders as $dirName) {
     printf( "<option value='%s'>%s</option>\n", $dirName, $dirName);
 }
