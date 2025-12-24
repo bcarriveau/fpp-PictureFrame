@@ -32,7 +32,7 @@
         "pfemailport": {
             "name": "pfemailport",
             "description": "IMAP Server Port",
-            "tip": "TCP Port used on IMAP server.  Most server use 993 for encrypted traffic, some servers may still require 143.",
+            "tip": "TCP Port used on IMAP server. Most server use 993 for encrypted traffic, some servers may still require 143.",
             "gatherStats": false,
             "restart": 0,
             "type": "select",
@@ -82,7 +82,7 @@
         "pfautodelete": {
             "name": "pfautodelete",
             "description": "Delete After Downloading",
-            "tip": "Automatically delete emails after downloading images.  If no attachment images are found, the email will not be deleted.",
+            "tip": "Automatically delete emails after downloading images. If no attachment images are found, the email will not be deleted.",
             "gatherStats": false,
             "type": "checkbox",
             "checkedValue": "1",

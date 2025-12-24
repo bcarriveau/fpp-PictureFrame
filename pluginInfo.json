@@ -1,23 +1,35 @@
 {
-    "repoName": "fpp-PictureFrame",
-    "name": "FPP Picture Frame",
-    "author": "Chris Pinkham (CaptainMurdoch)",
-    "description": "This plugin makes it easier to use FPP to create a digital picture frame with the ability to automatically download images from a remote IMAP mailbox.",
-    "homeURL": "https://github.com/FalconChristmas/fpp-PictureFrame",
-    "srcURL": "https://github.com/FalconChristmas/fpp-PictureFrame.git",
-    "bugURL": "https://github.com/FalconChristmas/fpp-PictureFrame/issues",
-    "allowUpdates": 1,
-    "versions": [
-        {
-            "minFPPVersion": "7.0",
-            "maxFPPVersion": "0",
-            "branch": "main",
-            "sha": "",
-            "dependencies": {
-                "packages": [
-                    "php-imap"
-                ]
-            }
-        }
-    ]
+  "repoName": "fpp-PictureFrame",
+  "name": "FPP Picture Frame (Enhanced - Now with Google Drive Support)",
+  "author": "Chris Pinkham (CaptainMurdoch) - Enhanced by Bill Carriveau"
+  "description": "Digital picture frame plugin for FPP. Original: auto-downloads images from IMAP email. Enhanced: adds support for downloading from public Google Drive shared folders (no auth needed) using gdown.",
+  "homeURL": "https://github.com/FalconChristmas/fpp-PictureFrame",
+  "srcURL": "https://github.com/FalconChristmas/fpp-PictureFrame.git",
+  "bugURL": "https://github.com/FalconChristmas/fpp-PictureFrame/issues", 
+  "allowUpdates": 1,
+  "versions": [
+    {
+      "minFPPVersion": "7.0",
+      "maxFPPVersion": "8.99",
+      "branch": "main",
+      "sha": "",
+      "dependencies": {
+        "packages": [
+          "php-imap",
+        ]
+      }
+    },
+    {
+      "minFPPVersion": "9.0",
+      "maxFPPVersion": "0",
+      "branch": "main",
+      "sha": "",
+      "dependencies": {
+        "packages": [
+          "php-imap",
+          "python3-venv"
+        ]
+      }
+    }
+  ]
 }
