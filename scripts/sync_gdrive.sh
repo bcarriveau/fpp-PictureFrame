@@ -23,9 +23,9 @@ fi
 
 # If single URL arg provided, sync only that
 if [ $# -eq 1 ]; then
-    URL="$1"
-    echo "Single folder sync for $URL" >> "$LOG_FILE"
-    GDRIVE_FOLDERS="[{\"url\": \"$URL\", \"last_sync\": \"Never\"}]"
+    SINGLE_URL="$1"
+    echo "Single folder sync for $SINGLE_URL" >> "$LOG_FILE"
+    GDRIVE_FOLDERS=$(jq '.gdriveFolders // []' "$CONFIG_FILE")
 else
     GDRIVE_FOLDERS=$(jq '.gdriveFolders // []' "$CONFIG_FILE")
 fi
@@ -53,6 +53,9 @@ for (( i=0; i<LENGTH; i++ )); do
     URL=$(echo "$GDRIVE_FOLDERS" | jq -r ".[$i].url")
     if [ -z "$URL" ] || [ "$URL" = "null" ]; then continue; fi
 
+    # For single mode, skip if not matching
+    if [ $# -eq 1 ] && [ "$URL" != "$SINGLE_URL" ]; then continue; fi
+
     echo "Processing URL: $URL" >> "$LOG_FILE"
 
     # Fetch the folder title from the <title> tag (works for public shared folders)
@@ -71,18 +74,19 @@ for (( i=0; i<LENGTH; i++ )); do
     chown fpp:fpp "$LOCAL_SUBDIR"
 
     echo "Syncing to subdir: $LOCAL_SUBDIR" >> "$LOG_FILE"
+    echo "Downloading from Drive..." >> "$LOG_FILE"
 
     # Download folder contents to temp
     gdown --folder "$URL" -O "$TEMP_DIR" --quiet --remaining-ok >> "$LOG_FILE" 2>&1
     if [ $? -eq 0 ]; then
+        echo "Download complete. Transferring files..." >> "$LOG_FILE"
         # Sync contents (flatten if subfolders in Drive, ignore existing)
         rsync -av --ignore-existing "$TEMP_DIR/"* "$LOCAL_SUBDIR/" >> "$LOG_FILE" 2>&1
         SUCCESS=1
-        # Update per-folder last_sync in config (only if not single mode)
-        if [ $# -ne 1 ]; then
-            LAST_SYNC=$(date '+%Y-%m-%d %H:%M:%S')
-            jq ".[$i].last_sync = \"$LAST_SYNC\"" "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-        fi
+        LAST_SYNC=$(date '+%Y-%m-%d %H:%M:%S')
+        echo "Sync successful for $URL" >> "$LOG_FILE"
+        # Update per-folder last_sync in config by searching URL
+        jq '(.gdriveFolders[] | select(.url == "'"$URL"'").last_sync) = "'"$LAST_SYNC"'"' "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
     else
         echo "Warning: gdown failed for $URL" >> "$LOG_FILE"
     fi

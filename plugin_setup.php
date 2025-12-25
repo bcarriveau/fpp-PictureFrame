@@ -99,14 +99,10 @@ function FetchImagesDone() {
 }
 
 function SyncGDrive() {
-    if (!$('#checkbox-gdrive_enabled').prop('checked')) {
-        alert('Google Drive Sync is not enabled.');
-        return;
-    }
     var options = {
         id: 'syncGDriveDialog',
         title: 'Sync Google Drive Folders',
-        body: "<textarea style='width: 99%; height: 500px;' disabled id='syncGDriveText'></textarea>",
+        body: "<p>Syncing... this may take a while depending on folder size. Please wait for completion.</p><textarea style='width: 99%; height: 470px;' disabled id='syncGDriveText'></textarea>",
         noClose: true,
         keyboard: false,
         backdrop: 'static',
@@ -135,7 +131,7 @@ function SyncGDriveRow(button) {
     var options = {
         id: 'syncGDriveDialog',
         title: 'Sync Single Google Drive Folder',
-        body: "<textarea style='width: 99%; height: 500px;' disabled id='syncGDriveText'></textarea>",
+        body: "<p>Syncing... this may take a while depending on folder size. Please wait for completion.</p><textarea style='width: 99%; height: 470px;' disabled id='syncGDriveText'></textarea>",
         noClose: true,
         keyboard: false,
         backdrop: 'static',
@@ -157,6 +153,7 @@ function SyncGDriveRow(button) {
 function SyncDone() {
     $('#syncGDriveCloseButton').prop('disabled', false);
     EnableModalDialogCloseButton('syncGDriveDialog');
+    LoadGDriveConfig();  // Ensure reload after sync to update last_sync
 }
 
 function GeneratePlaylist() {
@@ -315,6 +312,7 @@ function SavePictureFrameConfig() {
     var configStr = JSON.stringify(config);
     $.post('/api/configfile/plugin.fpp-PictureFrame.json', configStr).done(function(data) {
         $.jGrowl('FPP Picture Frame Config Saved');
+        LoadGDriveConfig();  // Reload to show saved state
     }).fail(function() {
         alert('Error, could not save plugin.fpp-PictureFrame.json config file.');
     });
@@ -355,6 +353,14 @@ function LoadGDriveConfig() {
                     "</tr>";
             }
             $('#gdriveBody').html(rows);
+            // Add auto-save on URL blur with debounce
+            var debounceTimer;
+            $(document).off('blur', '.gdrive_url').on('blur', '.gdrive_url', function() {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(function() {
+                    SavePictureFrameConfig();
+                }, 500);  // 500ms debounce
+            });
         }
     });
 }
@@ -398,7 +404,7 @@ function DeleteSelectedGDrive() {
 
 var folderTableInfo = {
     tableName: "foldersTable",
-    selected:  -1,
+    selected: -1,
     enableButtons: [ "btnDeleteFolder" ],
     disableButtons: [],
     sortable: 0
@@ -406,7 +412,7 @@ var folderTableInfo = {
 
 var senderTableInfo = {
     tableName: "sendersTable",
-    selected:  -1,
+    selected: -1,
     enableButtons: [ "btnDeleteSender" ],
     disableButtons: [],
     sortable: 1
@@ -414,7 +420,7 @@ var senderTableInfo = {
 
 var gdriveTableInfo = {
     tableName: "gdriveTable",
-    selected:  -1,
+    selected: -1,
     enableButtons: [ "btnDeleteGDrive" ],
     disableButtons: [],
     sortable: 1
@@ -426,7 +432,7 @@ $(document).ready(function() {
     SetupSelectableTableRow(gdriveTableInfo);
     LoadConfig();
     LoadGDriveConfig();
-    $(document).tooltip();
+    $('[data-bs-toggle="tooltip"]').tooltip();  // Target only elements with tooltips
 });
 </script>
 
