@@ -25,6 +25,24 @@ if (isset($_GET['action']) && $_GET['action'] == 'sync_gdrive') {
     }
     exit;
 }
+
+if (isset($_GET['action']) && $_GET['action'] == 'sync_gdrive_single' && isset($_GET['url'])) {
+    // Handler for single folder sync
+    $scriptPath = '/home/fpp/media/plugins/fpp-PictureFrame/scripts/sync_gdrive.sh';  // Adjust if script is elsewhere
+    if (file_exists($scriptPath)) {
+        $url = escapeshellarg($_GET['url']);
+        shell_exec("bash $scriptPath $url 2>&1");
+        $logFile = '/tmp/gdrive_sync.log';
+        if (file_exists($logFile)) {
+            echo nl2br(file_get_contents($logFile));
+        } else {
+            echo "No log file generated.";
+        }
+    } else {
+        echo "Error: sync_gdrive.sh not found at $scriptPath";
+    }
+    exit;
+}
 ?>
 
 <script>
@@ -41,6 +59,15 @@ function InsertSenderRow() {
 
 function InsertFolderRow() {
     $('#foldersBody').append("<tr><td><input type='text' class='folder' size=32 maxlength=64 value='' /></td></tr>");
+}
+
+function InsertGDriveRow() {
+    $('#gdriveBody').append("<tr><td valign='middle'>  <div class='rowGrip'> <i class='rowGripIcon fpp-icon-grip'></i> </div> </td>" +
+                    "<td><input type='text' class='gdrive_url' size=60 maxlength=1024 value='' /></td>" +
+                    "<td><input type='text' class='last_sync' size=20 maxlength=64 value='Never' disabled /></td>" +
+                    "<td><button class='buttons btn-success btn-sm' onClick='SyncGDriveRow(this);'>Sync</button></td>" +
+                    "<td onClick='$(this).parent().remove();'><span style='cursor: pointer;'><b>[X]</b></span></td>" +
+                    "</tr>");
 }
 
 function CheckForNewImages() {
@@ -72,6 +99,10 @@ function FetchImagesDone() {
 }
 
 function SyncGDrive() {
+    if (!$('#checkbox-gdrive_enabled').prop('checked')) {
+        alert('Google Drive Sync is not enabled.');
+        return;
+    }
     var options = {
         id: 'syncGDriveDialog',
         title: 'Sync Google Drive Folders',
@@ -83,7 +114,7 @@ function SyncGDrive() {
         buttons: {
             'Close': {
                 id: 'syncGDriveCloseButton',
-                click: function() { CloseModalDialog('syncGDriveDialog'); },
+                click: function() { CloseModalDialog('syncGDriveDialog'); LoadGDriveConfig(); },
                 disabled: true,
                 class: 'btn-success'
             }
@@ -94,13 +125,38 @@ function SyncGDrive() {
     StreamURL('plugin.php?plugin=fpp-PictureFrame&page=plugin_setup.php&action=sync_gdrive&nopage=1', 'syncGDriveText', 'SyncDone');
 }
 
+function SyncGDriveRow(button) {
+    var row = $(button).closest('tr');
+    var url = row.find('.gdrive_url').val().trim();
+    if (url == '') {
+        alert('No URL in this row.');
+        return;
+    }
+    var options = {
+        id: 'syncGDriveDialog',
+        title: 'Sync Single Google Drive Folder',
+        body: "<textarea style='width: 99%; height: 500px;' disabled id='syncGDriveText'></textarea>",
+        noClose: true,
+        keyboard: false,
+        backdrop: 'static',
+        footer: '',
+        buttons: {
+            'Close': {
+                id: 'syncGDriveCloseButton',
+                click: function() { CloseModalDialog('syncGDriveDialog'); LoadGDriveConfig(); },
+                disabled: true,
+                class: 'btn-success'
+            }
+        }
+    };
+    $('#syncGDriveCloseButton').prop('disabled', true);
+    DoModalDialog(options);
+    StreamURL('plugin.php?plugin=fpp-PictureFrame&page=plugin_setup.php&action=sync_gdrive_single&url=' + encodeURIComponent(url) + '&nopage=1', 'syncGDriveText', 'SyncDone');
+}
+
 function SyncDone() {
     $('#syncGDriveCloseButton').prop('disabled', false);
     EnableModalDialogCloseButton('syncGDriveDialog');
-    // Reload last sync time in UI (FPP API for single setting)
-    $.get('/api/setting/gdrive_last_sync', function(data) {
-        $('#text-gdrive_last_sync').val(data);
-    });
 }
 
 function GeneratePlaylist() {
@@ -245,6 +301,17 @@ function SavePictureFrameConfig() {
     });
     config.senders = senders;
 
+    var gdriveFolders = [];
+    $('#gdriveBody > tr').each(function() {
+        var folder = {};
+        folder.url = $(this).find('.gdrive_url').val().trim();
+        folder.last_sync = $(this).find('.last_sync').val().trim();
+        if (folder.url != '') {
+            gdriveFolders.push(folder);
+        }
+    });
+    config.gdriveFolders = gdriveFolders;
+
     var configStr = JSON.stringify(config);
     $.post('/api/configfile/plugin.fpp-PictureFrame.json', configStr).done(function(data) {
         $.jGrowl('FPP Picture Frame Config Saved');
@@ -270,6 +337,24 @@ function LoadConfig() {
                     "</tr>";
             }
             $('#sendersBody').html(rows);
+        }
+    });
+}
+
+function LoadGDriveConfig() {
+    $.ajax({
+        url: '/api/configfile/plugin.fpp-PictureFrame.json',
+        success: function(data) {
+            var rows = "";
+            for (var x = 0; x < data.gdriveFolders.length; x++) {
+                rows += "<tr><td valign='middle'>  <div class='rowGrip'> <i class='rowGripIcon fpp-icon-grip'></i> </div> </td>" +
+                    "<td><input type='text' class='gdrive_url' size=60 maxlength=1024 value='" + data.gdriveFolders[x].url + "' /></td>" +
+                    "<td><input type='text' class='last_sync' size=20 maxlength=64 value='" + data.gdriveFolders[x].last_sync + "' disabled /></td>" +
+                    "<td><button class='buttons btn-success btn-sm' onClick='SyncGDriveRow(this);'>Sync</button></td>" +
+                    "<td onClick='$(this).parent().remove();'><span style='cursor: pointer;'><b>[X]</b></span></td>" +
+                    "</tr>";
+            }
+            $('#gdriveBody').html(rows);
         }
     });
 }
@@ -303,6 +388,14 @@ function DeleteSelectedSender() {
     }
 }
 
+function DeleteSelectedGDrive() {
+    if (gdriveTableInfo.selected >= 0) {
+        $('#gdriveBody .fppTableSelectedEntry').remove();
+        gdriveTableInfo.selected = -1;
+        SetButtonState("#btnDeleteGDrive", "disable");
+    }
+}
+
 var folderTableInfo = {
     tableName: "foldersTable",
     selected:  -1,
@@ -319,13 +412,21 @@ var senderTableInfo = {
     sortable: 1
 };
 
+var gdriveTableInfo = {
+    tableName: "gdriveTable",
+    selected:  -1,
+    enableButtons: [ "btnDeleteGDrive" ],
+    disableButtons: [],
+    sortable: 1
+};
+
 $(document).ready(function() {
     SetupSelectableTableRow(folderTableInfo);
     SetupSelectableTableRow(senderTableInfo);
+    SetupSelectableTableRow(gdriveTableInfo);
     LoadConfig();
+    LoadGDriveConfig();
     $(document).tooltip();
-    // Make last sync field readonly (since FPP doesn't support "readonly" type natively)
-    $('#text-gdrive_last_sync').prop('readonly', true);
 });
 </script>
 
@@ -431,7 +532,37 @@ PrintSettingGroup('pfimapsettings', '', '', '', 'fpp-PictureFrame');
 PrintSettingGroup('pfgdrivesettings', '', '', '', 'fpp-PictureFrame');
 ?>
 
-        <input type='button' class='buttons btn-success' value='Sync Now' onClick='SyncGDrive();'>
+        <div class="row tablePageHeader">
+            <div class="col-md"><h3>Google Drive Folders</h3></div>
+            <div class="col-md-auto ms-lg-auto">
+                <div class="form-actions">
+                    <input type=button value='Delete' onClick='DeleteSelectedGDrive();' data-btn-enabled-class="btn-outline-danger" id='btnDeleteGDrive' class='disableButtons'>
+
+                    <button class='buttons btn-outline-success' value='Add' onClick='InsertGDriveRow();'><i class="fas fa-plus"></i> Add</button>
+                    <input type='button' class='buttons btn-success' value='Save' onClick='SavePictureFrameConfig();'>
+                </div>
+            </div>
+        </div>
+
+        <div class='fppTableWrapper fppTableWrapperAsTable'>
+            <div class='fppTableContents'>
+                <table id='gdriveTable' class='fppSelectableRowTable'>
+                    <thead>
+                        <tr class='tblheader'>
+                            <th></th>
+                            <th title='URL'>Shared Folder URL</th>
+                            <th title='Last Sync'>Last Sync</th>
+                            <th>Sync</th>
+                            <th>Delete</th>
+                        </tr>
+                    </thead>
+                    <tbody id='gdriveBody' class='ui-sortable'>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <input type='button' class='buttons btn-success' value='Sync All' onClick='SyncGDrive();'>
     </fieldset>
 </div>
 <div id='emailPopup' title='Checking for new images' style="display: none">

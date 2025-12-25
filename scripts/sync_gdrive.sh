@@ -13,16 +13,22 @@ source "$VENV" >> "$LOG_FILE" 2>&1 || {
     exit 1
 }
 
-# Plugin settings file (FPP saves as key = value lines)
-SETTINGS_FILE="/home/fpp/media/config/plugin.fpp-PictureFrame"
-if [ ! -f "$SETTINGS_FILE" ]; then
-    echo "Error: Settings file $SETTINGS_FILE not found" >> "$LOG_FILE"
+# Plugin config file (JSON array of folders)
+CONFIG_FILE="/home/fpp/media/config/plugin.fpp-PictureFrame.json"
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Error: Config file $CONFIG_FILE not found" >> "$LOG_FILE"
     deactivate
     exit 1
 fi
 
-# Extract gdrive_folder_urls (handle quoted or unquoted value)
-GDRIVE_URLS=$(sed -n 's/^gdrive_folder_urls = \(.*\)/\1/p' "$SETTINGS_FILE" | sed 's/^[" ]*//;s/[" ]*$//')
+# If single URL arg provided, sync only that
+if [ $# -eq 1 ]; then
+    URL="$1"
+    echo "Single folder sync for $URL" >> "$LOG_FILE"
+    GDRIVE_FOLDERS="[{\"url\": \"$URL\", \"last_sync\": \"Never\"}]"
+else
+    GDRIVE_FOLDERS=$(jq '.gdriveFolders // []' "$CONFIG_FILE")
+fi
 
 # Local base dir for images
 LOCAL_BASE_DIR="/home/fpp/media/images"
@@ -36,24 +42,24 @@ mkdir -p "$TEMP_DIR"
 # Flag for successful sync
 SUCCESS=0
 
-# Function to sanitize folder name (replace invalid chars with _)
+# Function to sanitize folder name (replace invalid chars with _, spaces with _)
 sanitize_name() {
     echo "$1" | tr -cd '[:alnum:]\-_ ' | tr ' ' '_'
 }
 
-# Split URLs by semicolon and sync each
-IFS=';'
-for URL in $GDRIVE_URLS; do
-    URL=$(echo "$URL" | xargs)  # Trim whitespace
-    if [ -z "$URL" ]; then continue; fi
+# Iterate over each folder in the array
+LENGTH=$(echo "$GDRIVE_FOLDERS" | jq 'length')
+for (( i=0; i<LENGTH; i++ )); do
+    URL=$(echo "$GDRIVE_FOLDERS" | jq -r ".[$i].url")
+    if [ -z "$URL" ] || [ "$URL" = "null" ]; then continue; fi
 
     echo "Processing URL: $URL" >> "$LOG_FILE"
 
     # Fetch the folder title from the <title> tag (works for public shared folders)
-    TITLE=$(curl -s --max-time 10 "$URL" | grep -oP '<title>\K[^<]+(?= - Google Drive</title>)' || echo "")
+    TITLE=$(curl -s --max-time 10 "$URL" | grep -oP '<title>\K[^<]+(?= - Google Drive)' || echo "")
     if [ -z "$TITLE" ]; then
-        echo "Warning: Could not fetch folder title from $URL (may not be public or network issue). Using fallback 'unknown'" >> "$LOG_FILE"
-        TITLE="unknown"
+        echo "Warning: Could not fetch folder title from $URL. Using fallback 'unknown_folder'" >> "$LOG_FILE"
+        TITLE="unknown_folder"
     fi
 
     # Sanitize title for filesystem safety
@@ -69,9 +75,14 @@ for URL in $GDRIVE_URLS; do
     # Download folder contents to temp
     gdown --folder "$URL" -O "$TEMP_DIR" --quiet --remaining-ok >> "$LOG_FILE" 2>&1
     if [ $? -eq 0 ]; then
-        # Sync contents (flatten, ignore existing)
+        # Sync contents (flatten if subfolders in Drive, ignore existing)
         rsync -av --ignore-existing "$TEMP_DIR/"* "$LOCAL_SUBDIR/" >> "$LOG_FILE" 2>&1
         SUCCESS=1
+        # Update per-folder last_sync in config (only if not single mode)
+        if [ $# -ne 1 ]; then
+            LAST_SYNC=$(date '+%Y-%m-%d %H:%M:%S')
+            jq ".[$i].last_sync = \"$LAST_SYNC\"" "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+        fi
     else
         echo "Warning: gdown failed for $URL" >> "$LOG_FILE"
     fi
@@ -82,17 +93,5 @@ done
 
 rm -rf "$TEMP_DIR"
 deactivate
-
-if [ $SUCCESS -eq 1 ]; then
-    LAST_SYNC=$(date '+%Y-%m-%d %H:%M:%S')
-    echo "Sync successful. Updating last sync time to $LAST_SYNC" >> "$LOG_FILE"
-    if grep -q "^gdrive_last_sync =" "$SETTINGS_FILE"; then
-        sed -i "s/^gdrive_last_sync =.*/gdrive_last_sync = \"$LAST_SYNC\"/" "$SETTINGS_FILE"
-    else
-        echo "gdrive_last_sync = \"$LAST_SYNC\"" >> "$SETTINGS_FILE"
-    fi
-else
-    echo "No successful syncs occurred" >> "$LOG_FILE"
-fi
 
 echo "Sync finished - check $LOG_FILE for details" >> "$LOG_FILE"
