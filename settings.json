@@ -10,12 +10,6 @@
                 "pfmailbox",
                 "pfautodelete"
             ]
-        },
-        "pfgdrivesettings": {
-            "description": "Google Drive Shared Folders Settings",
-            "settings": [
-                "gdrive_enabled"
-            ]
         }
     },
     "attributes": {
@@ -94,15 +88,6 @@
             "checkedValue": "1",
             "uncheckedValue": "0",
             "default": "1"
-        },
-        "gdrive_enabled": {
-            "name": "gdrive_enabled",
-            "description": "Enable Google Drive Sync",
-            "tip": "Enable automatic downloading of images from public shared Google Drive folders. Requires 'Anyone with the link' access.",
-            "type": "checkbox",
-            "checkedValue": "1",
-            "uncheckedValue": "0",
-            "default": "0"
         }
     }
 }

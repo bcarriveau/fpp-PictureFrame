@@ -534,9 +534,6 @@ PrintSettingGroup('pfimapsettings', '', '', '', 'fpp-PictureFrame');
         <br><br>
         <hr>
         <br>
-<?php
-PrintSettingGroup('pfgdrivesettings', '', '', '', 'fpp-PictureFrame');
-?>
 
         <div class="row tablePageHeader">
             <div class="col-md"><h3>Google Drive Folders</h3></div>
