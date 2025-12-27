@@ -105,6 +105,13 @@ for (( i=0; i<LENGTH; i++ )); do
     rm -rf "$TEMP_DIR"/*
 done
 
+# Add global last_full_sync timestamp if this was a full sync (no arg) and at least one succeeded
+if [ $# -eq 0 ] && [ $SUCCESS -eq 1 ]; then
+    LAST_FULL_SYNC=$(date '+%Y-%m-%d %H:%M:%S')
+    echo "Updating global last_full_sync: $LAST_FULL_SYNC" >> "$LOG_FILE"
+    jq '.last_full_sync = "'"$LAST_FULL_SYNC"'"' "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+fi
+
 rm -rf "$TEMP_DIR"
 deactivate
 

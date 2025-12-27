@@ -118,7 +118,6 @@ function SyncGDrive() {
     };
     $('#syncGDriveCloseButton').prop('disabled', true);
     DoModalDialog(options);
-    $('#syncGDriveDialog').attr('inert', true).removeAttr('aria-hidden');
     StreamURL('plugin.php?plugin=fpp-PictureFrame&page=plugin_setup.php&action=sync_gdrive&nopage=1', 'syncGDriveText', 'SyncDone');
 }
 
@@ -148,7 +147,6 @@ function SyncGDriveRow(button) {
     };
     $('#syncGDriveCloseButton').prop('disabled', true);
     DoModalDialog(options);
-    $('#syncGDriveDialog').attr('inert', true).removeAttr('aria-hidden');
     StreamURL('plugin.php?plugin=fpp-PictureFrame&page=plugin_setup.php&action=sync_gdrive_single&url=' + encodeURIComponent(url) + '&nopage=1', 'syncGDriveText', 'SyncDone');
 }
 
@@ -312,12 +310,18 @@ function SavePictureFrameConfig() {
     config.gdriveFolders = gdriveFolders;
 
     var configStr = JSON.stringify(config);
-    $.post('/api/configfile/plugin.fpp-PictureFrame.json', configStr).done(function(data) {
-        $.jGrowl('FPP Picture Frame Config Saved');
-        LoadGDriveConfig();  // Reload to show saved state
-    }).fail(function() {
-        alert('Error, could not save plugin.fpp-PictureFrame.json config file.');
-    });
+    console.log('Saving config:', configStr);  // Debug: Log the config being saved
+
+    $.post('/api/configfile/plugin.fpp-PictureFrame.json', configStr)
+        .done(function(data) {
+            console.log('Config saved successfully. Server response:', data);  // Debug: Log success response
+            $.jGrowl('FPP Picture Frame Config Saved');
+            LoadGDriveConfig();  // Reload to show saved state
+        })
+        .fail(function(jqXHR, textStatus, errorThrown) {
+            console.error('Error saving config:', textStatus, errorThrown);  // Debug: Log failure details
+            alert('Error, could not save plugin.fpp-PictureFrame.json config file. Check console for details.');
+        });
 }
 
 function LoadConfig() {
@@ -344,7 +348,9 @@ function LoadConfig() {
 function LoadGDriveConfig() {
     $.ajax({
         url: '/api/configfile/plugin.fpp-PictureFrame.json',
+        async: false,  // Make synchronous to ensure load completes before continuing
         success: function(data) {
+            console.log('Loaded GDrive config:', data);  // Debug: Log the loaded data
             var rows = "";
             for (var x = 0; x < data.gdriveFolders.length; x++) {
                 rows += "<tr><td valign='middle'>  <div class='rowGrip'> <i class='rowGripIcon fpp-icon-grip'></i> </div> </td>" +
@@ -355,14 +361,28 @@ function LoadGDriveConfig() {
                     "</tr>";
             }
             $('#gdriveBody').html(rows);
+            var lastFullSync = data.last_full_sync || 'Never';
+            $('#lastFullSync').text('Last full ync: ' + lastFullSync);
             // Add auto-save on URL blur with debounce
             var debounceTimer;
             $(document).off('blur', '.gdrive_url').on('blur', '.gdrive_url', function() {
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(function() {
-                    SavePictureFrameConfig();
-                }, 500);  // 500ms debounce
+                var currentInput = $(this);
+                var originalValue = currentInput.data('original-value') || '';  // Store original on focus if needed
+                if (currentInput.val().trim() !== originalValue) {  // Only save if changed
+                    console.log('Blur detected on GDrive URL, triggering save if changed.');  // Debug: Log blur trigger
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(function() {
+                        SavePictureFrameConfig();
+                    }, 500);  // 500ms debounce
+                }
             });
+            // Optional: Store original value on focus for change detection
+            $(document).off('focus', '.gdrive_url').on('focus', '.gdrive_url', function() {
+                $(this).data('original-value', $(this).val().trim());
+            });
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.error('Error loading GDrive config:', textStatus, errorThrown);  // Debug: Log load errors
         }
     });
 }
@@ -548,6 +568,8 @@ PrintSettingGroup('pfimapsettings', '', '', '', 'fpp-PictureFrame');
                 </div>
             </div>
         </div>
+
+        <p id="lastFullSync">Last full Sync: Never</p>
 
         <div class='fppTableWrapper fppTableWrapperAsTable'>
             <div class='fppTableContents'>
