@@ -31,7 +31,7 @@ echo 'Service_smbd_nmbd = "1"' >> /home/fpp/media/settings
 
 echo "Installing gdown (Python tool for Google Drive shared folders) for PictureFrame plugin..."
 
-VENV_DIR="/home/fpp/media/plugindata/PictureFrame/gdown_venv"
+VENV_DIR="/home/fpp/media/plugindata/fpp-PictureFrame/gdown_venv"
 VENV_BIN="$VENV_DIR/.venv/bin"
 
 # Create plugindata directory if it doesn't exist

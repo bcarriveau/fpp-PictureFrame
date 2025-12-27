@@ -3,11 +3,21 @@
 # Google Drive sync script for fpp-PictureFrame plugin
 # Syncs images from one or more public shared Google Drive folders to /home/fpp/media/images/<friendly_folder_title>
 
-LOG_FILE="/tmp/gdrive_sync.log"
+LOG_FILE="/home/fpp/media/plugins/fpp-PictureFrame/gdrive_sync.log"
+mkdir -p "$(dirname "$LOG_FILE")"  # Ensure plugin dir exists
+chown fpp:fpp "$(dirname "$LOG_FILE")"
+
+# Ensure log is writable by fpp
+if [ -f "$LOG_FILE" ]; then
+    chown fpp:fpp "$LOG_FILE" 2>/dev/null || rm -f "$LOG_FILE" 2>/dev/null
+fi
+touch "$LOG_FILE"
+chown fpp:fpp "$LOG_FILE"
+
 echo "Google Drive sync started: $(date)" > "$LOG_FILE" 2>&1
 
 # Load venv
-VENV="/home/fpp/media/plugindata/PictureFrame/gdown_venv/.venv/bin/activate"
+VENV="/home/fpp/media/plugindata/fpp-PictureFrame/gdown_venv/.venv/bin/activate"
 source "$VENV" >> "$LOG_FILE" 2>&1 || {
     echo "Failed to activate venv" >> "$LOG_FILE"
     exit 1

@@ -14,7 +14,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'sync_gdrive') {
     $scriptPath = '/home/fpp/media/plugins/fpp-PictureFrame/scripts/sync_gdrive.sh';  // Adjust if script is elsewhere
     if (file_exists($scriptPath)) {
         shell_exec("bash $scriptPath 2>&1");
-        $logFile = '/tmp/gdrive_sync.log';
+        $logFile = '/home/fpp/media/plugins/fpp-PictureFrame/gdrive_sync.log';
         if (file_exists($logFile)) {
             echo nl2br(file_get_contents($logFile));
         } else {
@@ -32,7 +32,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'sync_gdrive_single' && isset($
     if (file_exists($scriptPath)) {
         $url = escapeshellarg($_GET['url']);
         shell_exec("bash $scriptPath $url 2>&1");
-        $logFile = '/tmp/gdrive_sync.log';
+        $logFile = '/home/fpp/media/plugins/fpp-PictureFrame/gdrive_sync.log';
         if (file_exists($logFile)) {
             echo nl2br(file_get_contents($logFile));
         } else {
@@ -118,6 +118,7 @@ function SyncGDrive() {
     };
     $('#syncGDriveCloseButton').prop('disabled', true);
     DoModalDialog(options);
+    $('#syncGDriveDialog').attr('inert', true).removeAttr('aria-hidden');
     StreamURL('plugin.php?plugin=fpp-PictureFrame&page=plugin_setup.php&action=sync_gdrive&nopage=1', 'syncGDriveText', 'SyncDone');
 }
 
@@ -147,6 +148,7 @@ function SyncGDriveRow(button) {
     };
     $('#syncGDriveCloseButton').prop('disabled', true);
     DoModalDialog(options);
+    $('#syncGDriveDialog').attr('inert', true).removeAttr('aria-hidden');
     StreamURL('plugin.php?plugin=fpp-PictureFrame&page=plugin_setup.php&action=sync_gdrive_single&url=' + encodeURIComponent(url) + '&nopage=1', 'syncGDriveText', 'SyncDone');
 }
 
@@ -566,6 +568,19 @@ PrintSettingGroup('pfimapsettings', '', '', '', 'fpp-PictureFrame');
         </div>
 
         <input type='button' class='buttons btn-success' value='Sync All' onClick='SyncGDrive();'>
+        <br>
+        <b>To set up automatic background syncing of Google Drive folders:</b>
+        <ol>
+            <li>Go to <b>Status/Control > Scheduler</b> and click <b>+ Add</b>.</li>
+            <li>Set <b>Active</b>, <b>Start Date</b>, <b>End Date</b>, <b>Day(s)</b>, and <b>Start Time</b> (e.g., 12:00 AM for daily start).</li>
+            <li>Set <b>Schedule Type</b> to <b>Command</b>.</li>
+            <li>Select <b>Command</b>: <b>Run Script</b>.</li>
+            <li>Set <b>Args</b>: "sync_gdrive.sh" (or the full path: /home/fpp/media/plugins/fpp-PictureFrame/scripts/sync_gdrive.sh).</li>
+            <li>Set <b>Stop Type</b> to <b>Graceful</b> (allows sync to finish if interrupted).</li>
+            <li>Set <b>Repeat</b>: Your interval (60min is max currently for daily setups).</li>
+            <li>Click <b>Save</b>.</li>
+        </ol>
+        This will run the full sync periodically without manual intervention.
     </fieldset>
 </div>
 <div id='emailPopup' title='Checking for new images' style="display: none">
