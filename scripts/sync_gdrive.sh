@@ -93,7 +93,7 @@ for (( i=0; i<LENGTH; i++ )); do
         # Sync contents (flatten if subfolders in Drive, ignore existing)
         rsync -av --ignore-existing "$TEMP_DIR/"* "$LOCAL_SUBDIR/" >> "$LOG_FILE" 2>&1
         SUCCESS=1
-        LAST_SYNC=$(date '+%Y-%m-%d %H:%M:%S')
+        LAST_SYNC=$(date '+%Y-%m-%d %I:%M:%S %p')
         echo "Sync successful for $URL" >> "$LOG_FILE"
         # Update per-folder last_sync in config by searching URL
         jq '(.gdriveFolders[] | select(.url == "'"$URL"'").last_sync) = "'"$LAST_SYNC"'"' "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
@@ -107,7 +107,7 @@ done
 
 # Add global last_full_sync timestamp if this was a full sync (no arg) and at least one succeeded
 if [ $# -eq 0 ] && [ $SUCCESS -eq 1 ]; then
-    LAST_FULL_SYNC=$(date '+%Y-%m-%d %H:%M:%S')
+    LAST_FULL_SYNC=$(date '+%Y-%m-%d %I:%M:%S %p')
     echo "Updating global last_full_sync: $LAST_FULL_SYNC" >> "$LOG_FILE"
     jq '.last_full_sync = "'"$LAST_FULL_SYNC"'"' "$CONFIG_FILE" > "$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
 fi
