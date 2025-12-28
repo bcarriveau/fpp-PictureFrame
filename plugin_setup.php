@@ -50,23 +50,21 @@ var config = {};          // Plugin configuration
 
 function InsertSenderRow() {
     $('#sendersBody').append("<tr><td valign='middle'>  <div class='rowGrip'> <i class='rowGripIcon fpp-icon-grip'></i> </div> </td>" +
-                    "<td><input type='text' class='email' size=32 maxlength=64 value='' /></td>" +
-                    "<td><input type='text' class='folder' size=32 maxlength=64 list='imageFolders' /></td>" +
-                    "<td><input type='text' class='note' size=32 maxlength=64 value='' /></td>" +
-                    "<td onClick='$(this).parent().remove();'><span style='cursor: pointer;'><b>[X]</b></span></td>" +
+                    "<td><input type='text' class='form-control email' size=32 maxlength=64 value='' /></td>" +
+                    "<td><input type='text' class='form-control folder' size=32 maxlength=64 list='imageFolders' /></td>" +
+                    "<td><input type='text' class='form-control note' size=32 maxlength=64 value='' /></td>" +
                     "</tr>");
 }
 
 function InsertFolderRow() {
-    $('#foldersBody').append("<tr><td><input type='text' class='folder' size=32 maxlength=64 value='' /></td></tr>");
+    $('#foldersBody').append("<tr><td><input type='text' class='form-control folder' size=32 maxlength=64 value='' /></td></tr>");
 }
 
 function InsertGDriveRow() {
     $('#gdriveBody').append("<tr><td valign='middle'>  <div class='rowGrip'> <i class='rowGripIcon fpp-icon-grip'></i> </div> </td>" +
-                    "<td><input type='text' class='gdrive_url' size=60 maxlength=1024 value='' /></td>" +
-                    "<td><input type='text' class='last_sync' size=20 maxlength=64 value='Never' disabled /></td>" +
+                    "<td><input type='text' class='form-control gdrive_url' size=60 maxlength=1024 value='' /></td>" +
+                    "<td><input type='text' class='form-control last_sync' size=20 maxlength=64 value='Never' disabled /></td>" +
                     "<td><button class='buttons btn-success btn-sm' onClick='SyncGDriveRow(this);'>Sync</button></td>" +
-                    "<td onClick='$(this).parent().remove();'><span style='cursor: pointer;'><b>[X]</b></span></td>" +
                     "</tr>");
 }
 
@@ -334,10 +332,9 @@ function LoadConfig() {
             var rows = "";
             for (var x = 0; x < config.senders.length; x++) {
                 rows += "<tr><td valign='middle'>  <div class='rowGrip'> <i class='rowGripIcon fpp-icon-grip'></i> </div> </td>" +
-                    "<td><input type='text' class='email' size=32 maxlength=64 value='" + config.senders[x].email + "' /></td>" +
-                    "<td><input type='text' class='folder' size=32 maxlength=64 value='" + config.senders[x].folder + "' list='imageFolders' /></td>" +
-                    "<td><input type='text' class='note' size=32 maxlength=64 value='" + config.senders[x].note + "' /></td>" +
-                    "<td onClick='$(this).parent().remove();'><span style='cursor: pointer;'><b>[X]</b></span></td>" +
+                    "<td><input type='text' class='form-control email' size=32 maxlength=64 value='" + config.senders[x].email + "' /></td>" +
+                    "<td><input type='text' class='form-control folder' size=32 maxlength=64 value='" + config.senders[x].folder + "' list='imageFolders' /></td>" +
+                    "<td><input type='text' class='form-control note' size=32 maxlength=64 value='" + config.senders[x].note + "' /></td>" +
                     "</tr>";
             }
             $('#sendersBody').html(rows);
@@ -354,15 +351,14 @@ function LoadGDriveConfig() {
             var rows = "";
             for (var x = 0; x < data.gdriveFolders.length; x++) {
                 rows += "<tr><td valign='middle'>  <div class='rowGrip'> <i class='rowGripIcon fpp-icon-grip'></i> </div> </td>" +
-                    "<td><input type='text' class='gdrive_url' size=60 maxlength=1024 value='" + data.gdriveFolders[x].url + "' /></td>" +
-                    "<td><input type='text' class='last_sync' size=20 maxlength=64 value='" + data.gdriveFolders[x].last_sync + "' disabled /></td>" +
+                    "<td><input type='text' class='form-control gdrive_url' size=60 maxlength=1024 value='" + data.gdriveFolders[x].url + "' /></td>" +
+                    "<td><input type='text' class='form-control last_sync' size=20 maxlength=64 value='" + data.gdriveFolders[x].last_sync + "' disabled /></td>" +
                     "<td><button class='buttons btn-success btn-sm' onClick='SyncGDriveRow(this);'>Sync</button></td>" +
-                    "<td onClick='$(this).parent().remove();'><span style='cursor: pointer;'><b>[X]</b></span></td>" +
                     "</tr>";
             }
             $('#gdriveBody').html(rows);
             var lastFullSync = data.last_full_sync || 'Never';
-            $('#lastFullSync').text('Last full ync: ' + lastFullSync);
+            $('#lastFullSync').text('Last full sync: ' + lastFullSync);
             // Add auto-save on URL blur with debounce
             var debounceTimer;
             $(document).off('blur', '.gdrive_url').on('blur', '.gdrive_url', function() {
@@ -490,8 +486,8 @@ if ($needfb) {
         </div>
 
         <div class='fppTableWrapper fppTableWrapperAsTable'>
-            <div class='fppTableContents'>
-                <table id='foldersTable' class='fppSelectableRowTable'>
+            <div class='fppTableContents table-responsive'>
+                <table id='foldersTable' class='table fppSelectableRowTable'>
                     <tbody id='foldersBody'>
 <?php
 $imageFolders = array();
@@ -504,7 +500,7 @@ foreach (scandir($imageDir) as $fileName) {
     }
 }
 foreach ($imageFolders as $dirName) {
-    printf( "<tr><td><input type='text' class='folder' size=32 maxlength=64 value='%s' disabled/></td></tr>", $dirName);
+    printf( "<tr><td><input type='text' class='form-control folder' size=32 maxlength=64 value='%s' disabled/></td></tr>", $dirName);
 }
 ?>
                     </tbody>
@@ -529,15 +525,14 @@ foreach ($imageFolders as $dirName) {
         </div>
 
         <div class='fppTableWrapper fppTableWrapperAsTable'>
-            <div class='fppTableContents'>
-                <table id='sendersTable' class='fppSelectableRowTable'>
+            <div class='fppTableContents table-responsive'>
+                <table id='sendersTable' class='table fppSelectableRowTable'>
                     <thead>
                         <tr class='tblheader'>
                             <th></th>
                             <th title='Email'>Email</th>
                             <th title='Folder'>Folder</th>
                             <th title='Note'>Note</th>
-                            <th>Delete</th>
                         </tr>
                     </thead>
                     <tbody id='sendersBody' class='ui-sortable'>
@@ -569,18 +564,17 @@ PrintSettingGroup('pfimapsettings', '', '', '', 'fpp-PictureFrame');
             </div>
         </div>
 
-        <p id="lastFullSync">Last full Sync: Never</p>
+        <p id="lastFullSync">Last full sync: Never</p>
 
         <div class='fppTableWrapper fppTableWrapperAsTable'>
-            <div class='fppTableContents'>
-                <table id='gdriveTable' class='fppSelectableRowTable'>
+            <div class='fppTableContents table-responsive'>
+                <table id='gdriveTable' class='table fppSelectableRowTable'>
                     <thead>
                         <tr class='tblheader'>
                             <th></th>
                             <th title='URL'>Shared Folder URL</th>
                             <th title='Last Sync'>Last Sync</th>
                             <th>Sync</th>
-                            <th>Delete</th>
                         </tr>
                     </thead>
                     <tbody id='gdriveBody' class='ui-sortable'>
