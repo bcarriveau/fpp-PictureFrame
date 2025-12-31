@@ -16,18 +16,10 @@ chown fpp:fpp "$LOG_FILE"
 
 echo "Google Drive sync started: $(date)" > "$LOG_FILE" 2>&1
 
-# Load venv
-VENV="/home/fpp/media/plugindata/fpp-PictureFrame/gdown_venv/.venv/bin/activate"
-source "$VENV" >> "$LOG_FILE" 2>&1 || {
-    echo "Failed to activate venv" >> "$LOG_FILE"
-    exit 1
-}
-
 # Plugin config file (JSON array of folders)
 CONFIG_FILE="/home/fpp/media/config/plugin.fpp-PictureFrame.json"
 if [ ! -f "$CONFIG_FILE" ]; then
     echo "Error: Config file $CONFIG_FILE not found" >> "$LOG_FILE"
-    deactivate
     exit 1
 fi
 
@@ -56,6 +48,9 @@ SUCCESS=0
 sanitize_name() {
     echo "$1" | tr -cd '[:alnum:]\-_ ' | tr ' ' '_'
 }
+
+# Path to gdown binary
+GDOWN_BIN="/home/fpp/media/plugins/fpp-PictureFrame/scripts/gdown"
 
 # Iterate over each folder in the array
 LENGTH=$(echo "$GDRIVE_FOLDERS" | jq 'length')
@@ -86,8 +81,8 @@ for (( i=0; i<LENGTH; i++ )); do
     echo "Syncing to subdir: $LOCAL_SUBDIR" >> "$LOG_FILE"
     echo "Downloading from Drive..." >> "$LOG_FILE"
 
-    # Download folder contents to temp
-    gdown --folder "$URL" -O "$TEMP_DIR" --quiet --remaining-ok >> "$LOG_FILE" 2>&1
+    # Download folder contents to temp using static binary
+    "$GDOWN_BIN" --folder "$URL" -O "$TEMP_DIR" --quiet --remaining-ok >> "$LOG_FILE" 2>&1
     if [ $? -eq 0 ]; then
         echo "Download complete. Transferring files..." >> "$LOG_FILE"
         # Sync contents (flatten if subfolders in Drive, ignore existing)
@@ -113,6 +108,5 @@ if [ $# -eq 0 ] && [ $SUCCESS -eq 1 ]; then
 fi
 
 rm -rf "$TEMP_DIR"
-deactivate
 
 echo "Sync finished - check $LOG_FILE for details" >> "$LOG_FILE"

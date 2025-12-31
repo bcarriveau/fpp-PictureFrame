@@ -49,6 +49,17 @@ else
     echo "Settings file not found: $SETTINGS_FILE (skipping)"
 fi
 
+// Purge venv and binary
+shell_exec('rm -rf /home/fpp/media/plugindata/fpp-PictureFrame/gdown_venv');
+shell_exec('rm -rf /home/fpp/media/plugins/fpp-PictureFrame/.venv');
+shell_exec('rm -f /home/fpp/media/plugins/fpp-PictureFrame/scripts/gdown');
+
+// Other uninstall logic if any (e.g., remove config, etc.)
+unlink('/home/fpp/media/config/plugin.fpp-PictureFrame.json');
+
+// Echo success or something
+echo "Uninstall complete. Old venv and binary purged.";
+
 # Optional: Remove php-imap (uncomment if you want to fully reverse dependencies; be cautious if other plugins use it)
 # apt-get -y remove --purge php-imap
 # apt-get -y autoremove

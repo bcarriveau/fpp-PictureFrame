@@ -1,74 +1,48 @@
 #!/bin/bash
 
-# fpp-PictureFrame install script - Enhanced with gdown support for Google Drive shared folders
+# fpp_install.sh for fpp-PictureFrame plugin
+# Copies files and sets up gdown static binary
 
-BASEDIR=$(dirname $0)
-cd $BASEDIR
-cd ..
+PLUGIN_DIR="/home/fpp/media/plugins/fpp-PictureFrame"
 
-dpkg --configure -a
-apt-get update
-apt-get -y install php-imap
+# Purge old venv and Python stuff if present
+rm -rf /home/fpp/media/plugindata/fpp-PictureFrame/gdown_venv
+rm -rf "$PLUGIN_DIR"/.venv  # Any other potential locations
+rm -f "$PLUGIN_DIR"/scripts/gdown  # Old binary if any
 
-cp scripts/CheckForNewPictureFrameImages.sh /home/fpp/media/scripts/
-chown fpp:fpp /home/fpp/media/scripts/CheckForNewPictureFrameImages.sh
+# Copy sync_gdrive.sh
+cp -f "$PLUGIN_DIR"/sync_gdrive.sh "$PLUGIN_DIR"/scripts/sync_gdrive.sh
+chmod 755 "$PLUGIN_DIR"/scripts/sync_gdrive.sh
+chown fpp:fpp "$PLUGIN_DIR"/scripts/sync_gdrive.sh
 
-cp scripts/pf-monitor*.sh /home/fpp/media/scripts/
-cp scripts/sync_gdrive.sh /home/fpp/media/scripts/  # Added: Copy sync_gdrive.sh to global scripts (but we'll call via PHP handler)
-chown fpp:fpp /home/fpp/media/scripts/pf-monitor*sh
-chown fpp:fpp /home/fpp/media/scripts/sync_gdrive.sh
-chmod +x /home/fpp/media/scripts/sync_gdrive.sh  # Ensure executable
+# Detect architecture
+ARCH=$(uname -m)
 
-systemctl --now enable smbd
-systemctl --now enable nmbd
-
-sed -i '/^Service_smbd_nmbd/d' /home/fpp/media/settings
-echo 'Service_smbd_nmbd = "1"' >> /home/fpp/media/settings
-
-# ────────────────────────────────────────────────────────────────────────────────
-# NEW: Install gdown (for Google Drive public shared folder downloads)
-# ────────────────────────────────────────────────────────────────────────────────
-
-echo "Installing gdown (Python tool for Google Drive shared folders) for PictureFrame plugin..."
-
-VENV_DIR="/home/fpp/media/plugindata/fpp-PictureFrame/gdown_venv"
-VENV_BIN="$VENV_DIR/.venv/bin"
-
-# Create plugindata directory if it doesn't exist
-mkdir -p "$(dirname "$VENV_DIR")"
-chown fpp:fpp "$(dirname "$VENV_DIR")"  # Ensure permissions
-
-# Skip if gdown is already installed in the venv
-if [ -f "$VENV_BIN/gdown" ]; then
-    echo "gdown already installed in venv → skipping installation"
-else
-    echo "Creating Python virtual environment and installing gdown..."
-
-    # Ensure python3-venv is available (usually is on FPP, but safe)
-    apt-get -y install python3-venv python3-pip
-
-    python3 -m venv "$VENV_DIR/.venv" || {
-        echo "ERROR: Failed to create venv"
+case "$ARCH" in
+    aarch64)
+        BINARY_NAME="gdown-arm64"
+        ;;
+    armv7l|armv6l)
+        BINARY_NAME="gdown-armhf"
+        ;;
+    x86_64)
+        BINARY_NAME="gdown-amd64"
+        ;;
+    *)
+        echo "Unsupported architecture: $ARCH"
         exit 1
-    }
+        ;;
+esac
 
-    source "$VENV_BIN/activate" || {
-        echo "ERROR: Failed to activate venv"
-        exit 1
-    }
-
-    pip install --upgrade pip setuptools wheel
-    pip install gdown || {
-        echo "ERROR: Failed to install gdown"
-        deactivate
-        exit 1
-    }
-
-    deactivate
-    echo "gdown installed successfully in $VENV_DIR"
+# Download the static binary from GitHub releases (update tag/version as needed)
+wget -O "$PLUGIN_DIR"/scripts/gdown "https://github.com/bcarriveau/fpp-PictureFrame/releases/download/v1.0/$BINARY_NAME"
+if [ $? -ne 0 ]; then
+    echo "Failed to download gdown binary for $ARCH"
+    exit 1
 fi
 
-# Fix permissions (important for fpp user to run it)
-chown -R fpp:fpp "$VENV_DIR"
+# Make executable
+chmod +x "$PLUGIN_DIR"/scripts/gdown
+chown fpp:fpp "$PLUGIN_DIR"/scripts/gdown
 
-echo "fpp_install.sh completed (including gdown setup)"
+echo "Installation complete. gdown binary installed for $ARCH."
